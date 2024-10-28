@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ image_data.place_name }} - 観光ガイド</title>
+    <style>
+        body {
+            background-color: #f5f5f5;
+            font-family: 'Arial', sans-serif;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-image {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            border-radius: 10px 10px 0 0;
+            border: 3px solid #d7385e; /* ポケモン風の赤い枠 */
+        }
+
+        .location-title {
+            background-color: #d7385e; /* ポケモン図鑑風の赤 */
+            color: white;
+            padding: 15px;
+            margin: 0;
+            text-align: center;
+            border-radius: 0 0 10px 10px;
+            font-size: 1.8rem;
+            font-weight: bold;
+        }
+
+        .chat-container {
+            height: 400px;
+            overflow-y: auto;
+            border: 2px solid #ffcc01; /* ポケモンの進化ボタン風の黄色 */
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            background-color: #fdfdfd;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 80%;
+            position: relative;
+        }
+
+        .message.assistant {
+            background-color: #f5f5f5;
+            margin-right: auto;
+        }
+
+        .message.user {
+            background-color: #ffcc01;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .timestamp {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 10px;
+            padding: 20px 0;
+            position: relative;
+        }
+
+        .input-field {
+            flex-grow: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .button {
+            padding: 12px 25px;
+            background-color: #ffcc01;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease;
+        }
+
+        .button:hover {
+            background-color: #e5b600;
+        }
+
+        .button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .audio-controls {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .audio-controls audio {
+            width: 100%;
+            max-width: 500px;
+            margin-top: 10px;
+        }
+
+        .audio-toggle {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 10px;
+            color: #666;
+            display: none;
+        }
+
+        .back-button {
+            margin-bottom: 20px;
+            display: inline-block;
+            background-color: #ffcc01;
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 16px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .back-button:hover {
+            background-color: #e5b600;
+        }
+
+        .error-message {
+            color: #ff0000;
+            background-color: #ffebee;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .gui-chat-container {
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="{{ url_for('album') }}" class="button back-button">アルバムに戻る</a>
+        
+        <!-- ヘッダー画像とタイトル -->
+        <img src="{{ image_data.image_path }}" alt="{{ image_data.place_name }}" class="header-image">
+        <h1 class="location-title">{{ image_data.place_name }}</h1>
+
+        
+
+        <!-- 音声コントロール -->
+        <div class="audio-controls">
+            <p>場所の説明を聞く：</p>
+            <audio controls>
+                <source src="{{ image_data.audio_path }}" type="audio/wav">
+                お使いのブラウザは音声再生に対応していません。
+            </audio>
+        </div>
+
+        <!-- チャットエリア -->
+        <div class="chat-container" id="chat-messages">
+            {% for message in chat_history %}
+            <div class="message {{ message.type }}">
+                {{ message.content }}
+                <div class="timestamp">{{ message.timestamp }}</div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div id="error-message" class="error-message"></div>
+        <div id="loading" class="loading">回答を生成中...</div>
+
+        <div class="audio-toggle">
+            <input type="checkbox" id="audio-enabled">
+            <label for="audio-enabled">チャットの音声を有効にする</label>
+        </div>
+
+        <div class="input-container">
+            <input type="text" id="message-input" class="input-field" placeholder="質問を入力してください...">
+            <button id="send-button" class="button">送信</button>
+        </div>
+    </div>
+
+    <script>
+    function launchGUIChat() {
+        fetch(`/launch_gui_chat/{{ image_data.image_id }}`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) {
+                    alert(data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('チャットの起動に失敗しました');
+            });
+    }
+    </script>
+    
+    <!-- JavaScriptファイルの読み込み -->
+    <script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+</body>
+</html>
